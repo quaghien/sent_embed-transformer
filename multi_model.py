@@ -5,7 +5,7 @@ from torch.nn import CrossEntropyLoss
 import copy
 import numpy as np
 import random
-from safetensors import load_file
+from safetensors.torch import load_file
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
 from transformers import MT5Config, MT5Tokenizer
