@@ -5,7 +5,7 @@ import torch
 from transformers import TrainingArguments
 from datasets import load_dataset
 import wandb
-from transformers import MT5Tokenizer
+from transformers import AutoTokenizer
 from multi_model import *
 from data_processing import *
 from trainer import *
@@ -16,15 +16,15 @@ set_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 custom_model = SMT5Model().to(device)
-tokenizer = MT5Tokenizer.from_pretrained('google/mt5-base')
+tokenizer = AutoTokenizer.from_pretrained('google/mt5-base')
 
-dataset = load_dataset('wanhin/data_atien', split='train')
+dataset = load_dataset('wanhin/luat-translate', split='train')
 src_texts = dataset['query']
 tgt_texts = dataset['positive']
 
 # Split dataset into training and validation
 train_src_texts, val_src_texts, train_tgt_texts, val_tgt_texts = train_test_split(
-    src_texts, tgt_texts, test_size=0.001, random_state=42)
+    src_texts, tgt_texts, test_size=0.0002, random_state=42)
 
 # Tạo Dataset cho dữ liệu huấn luyện và kiểm tra
 train_dataset = Build_Dataset(train_src_texts, train_tgt_texts, tokenizer)
