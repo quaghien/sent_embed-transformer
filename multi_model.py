@@ -8,7 +8,7 @@ import random
 from safetensors.torch import load_file
 
 from transformers.modeling_outputs import Seq2SeqLMOutput
-from transformers import MT5Config, MT5Tokenizer
+from transformers import MT5Config, AutoTokenizer
 from transformers.models.mt5.modeling_mt5 import MT5Stack
 from transformers import MT5PreTrainedModel, MT5EncoderModel
 
@@ -290,7 +290,7 @@ class SMT5Model(nn.Module):
     def generate(self, sentences=None, max_length=512, top_k=3, early_stopping=True):       #max_length_train=512
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        tokenizer = MT5Tokenizer.from_pretrained('google/mt5-base')
+        tokenizer = AutoTokenizer.from_pretrained('google/mt5-base')
         inputs = tokenizer(sentences,padding="max_length",truncation=True,max_length=max_length, return_tensors="pt").to(device)
 
         sent_output = self.sent_model(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask, return_dict=True)
