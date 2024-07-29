@@ -250,8 +250,9 @@ class SMT5Model(nn.Module):
         output_hidden_states=None,
         return_dict=True,
     ):
-        sent_output = self.sent_model(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
-        sent_embed = sent_output.last_hidden_state.mean(dim=1, keepdim=True)  # Average pooling
+        with torch.no_grad():
+            sent_output = self.sent_model(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
+            sent_embed = sent_output.last_hidden_state.mean(dim=1, keepdim=True)  # Average pooling
 
         encoder_outputs = self.encoder_model.encoder(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
         word_embed = encoder_outputs.last_hidden_state
