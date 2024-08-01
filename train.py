@@ -16,8 +16,8 @@ def preprocess_function(examples):
     inputs = examples['query'] 
     targets = examples['positive'] 
 
-    model_inputs = tokenizer(inputs, max_length=512, padding='max_length', truncation=True)
-    labels = tokenizer(text_target=targets, max_length=512, padding='max_length', truncation=True)
+    model_inputs = tokenizer(inputs, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
+    labels = tokenizer(text_target=targets, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
 
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
