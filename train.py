@@ -26,9 +26,9 @@ set_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 custom_model = SMT5Model().to(device)
-tokenizer = MT5Tokenizer.from_pretrained('google/mt5-base')
+tokenizer = AutoTokenizer.from_pretrained('google/mt5-base')
 
-# Load dataset và chọn 240 samples cho việc train
+
 datasets = load_dataset('wanhin/luat-translate', split='train')
 
 column_names = datasets.column_names
@@ -44,14 +44,14 @@ eval_dataset = split_dataset['test']
 train_dataset = train_dataset.map(
                 preprocess_function,
                 batched=True,
-                num_proc=8,
+                num_proc=16,
                 remove_columns=column_names
             )
 
 eval_dataset = eval_dataset.map(
                 preprocess_function,
                 batched=True,
-                num_proc=8,
+                num_proc=16,
                 remove_columns=column_names
             )
 
@@ -72,10 +72,10 @@ training_args = TrainingArguments(
     # weight_decay=0.01,
     gradient_accumulation_steps=128,  # Tích lũy gradient qua 8 bước
     logging_dir='./logs',
-    logging_steps=1,
+    logging_steps=32,
     report_to="wandb",  # Báo cáo kết quả lên wandb
     load_best_model_at_end=True,  # Load model tốt nhất vào cuối quá trình huấn luyện
-    max_grad_norm=1.0,
+    # max_grad_norm=1.0,
 )
 
 trainer = TranslationTrainer(
