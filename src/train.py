@@ -11,27 +11,29 @@ from data_processing import Build_Dataset,DataCollatorForTranslation
 from trainer import *
 import os
 
+    
+    
+def preprocess_function(examples):
+    inputs = examples['query']  # Truy cập trực tiếp các danh sách cột
+    targets = examples['positive']  # Truy cập trực tiếp các danh sách cột
+
+    model_inputs = tokenizer(inputs, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
+    labels = tokenizer(text_target=targets, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
+
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
+
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
     
-    def preprocess_function(examples):
-        inputs = examples['query']  # Truy cập trực tiếp các danh sách cột
-        targets = examples['positive']  # Truy cập trực tiếp các danh sách cột
-
-        model_inputs = tokenizer(inputs, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
-        labels = tokenizer(text_target=targets, max_length=512, padding='max_length', truncation=True, return_tensors="pt")
-
-        model_inputs["labels"] = labels["input_ids"]
-        return model_inputs
-
     set_seed(42)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    custom_model = SMT5Model().to(device)
 
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        custom_model = nn.DataParallel(custom_model)
+    custom_model = SMT5Model()
+
+    # if torch.cuda.device_count() > 1:
+    #     print("Let's use", torch.cuda.device_count(), "GPUs!")
+    #     custom_model = nn.DataParallel(custom_model)
 
     tokenizer = MT5Tokenizer.from_pretrained('google/mt5-base')
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
                     preprocess_function,
                     batched=True,
                     num_proc=16,
-                    batch_size=3,
+                    batch_size=2,
                     remove_columns=column_names
                 )
 
@@ -60,32 +62,33 @@ if __name__ == "__main__":
                     preprocess_function,
                     batched=True,
                     num_proc=16,
-                    batch_size=3,
+                    batch_size=2,
                     remove_columns=column_names
                 )
 
     data_collator = default_data_collator
-
+    
     training_args = TrainingArguments(
-        output_dir='./translation-v0-40e',
+        output_dir='./translation-v0-3e',
         run_name='translation-v0',
         evaluation_strategy="epoch",  # Đánh giá mỗi epoch
         save_strategy="epoch",
-        learning_rate=5e-5,
-        per_device_train_batch_size=3,  # Batch size
-        per_device_eval_batch_size=3,   # Batch size
-        num_train_epochs=40,  # Số lượng epoch
-        save_total_limit=2,
+        learning_rate=3e-5,
+        per_device_train_batch_size=6,  # Batch size
+        per_device_eval_batch_size=6,   # Batch size
+        num_train_epochs=3,  # Số lượng epoch
+        save_total_limit=3,
         bf16=True,
-        gradient_accumulation_steps=64, 
+        gradient_accumulation_steps=32, 
         logging_dir='./logs',
         logging_steps=16,
         report_to="wandb",  # Báo cáo kết quả lên wandb
         load_best_model_at_end=True,  # Load model tốt nhất vào cuối quá trình huấn luyện
-        remove_unused_columns=False
+        remove_unused_columns=False,
+        deepspeed="ds_config.json",
+        # save_steps = 100,
+        # eval_steps = 100
     )
-
-
 
     trainer = TranslationTrainer(
         model=custom_model,

@@ -11,7 +11,7 @@ from transformers.modeling_outputs import Seq2SeqLMOutput
 from transformers import MT5Config, AutoTokenizer
 from transformers.models.mt5.modeling_mt5 import MT5Stack
 from transformers import MT5PreTrainedModel, MT5EncoderModel
-
+import time
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -141,6 +141,7 @@ class MT5DecoderModel(MT5PreTrainedModel):
             output_attentions = None,
             output_hidden_states = None,
             return_dict = True,
+            hidden_states = None,
         ):
             # Decode
             decoder_outputs = self.decoder(
@@ -159,10 +160,6 @@ class MT5DecoderModel(MT5PreTrainedModel):
             )
 
             sequence_output = decoder_outputs[0]
-            if self.config.tie_word_embeddings:
-              # Rescale output before projecting on vocab
-              # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/transformer.py#L586
-              sequence_output = sequence_output * (self.model_dim**-0.5)
 
             lm_logits = self.lm_head(sequence_output)
 
@@ -193,13 +190,13 @@ class MT5DecoderModel(MT5PreTrainedModel):
 class SMT5Model(nn.Module):
     def __init__(self):
         super(SMT5Model, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.embed_fusion = EmbedFusion(fusion_type='attention').to(self.device)
-        self.sent_model = MT5EncoderModel.from_pretrained('wanhin/msim-mt5-base-fulldata').to(self.device)
-        self.encoder_model = MT5EncoderModel.from_pretrained('google/mt5-base').to(self.device)
-        self.decoder_model = MT5DecoderModel.from_pretrained('google/mt5-base').to(self.device)
+        self.embed_fusion = EmbedFusion(fusion_type='attention')
+        self.sent_model = MT5EncoderModel.from_pretrained('wanhin/msim-mt5-luat-atien')
+        self.encoder_model = MT5EncoderModel.from_pretrained('google/mt5-base')
+        self.decoder_model = MT5DecoderModel.from_pretrained('google/mt5-base')
         self.softmax = nn.Softmax(dim=-1)
-
+        self.config = MT5Config.from_pretrained('google/mt5-base')
+        
         self.remove_shared()
         
         self.freeze_sent_model()
@@ -250,6 +247,48 @@ class SMT5Model(nn.Module):
         output_hidden_states=None,
         return_dict=True,
     ):
+        # start_time = time.time()
+        # with torch.no_grad():
+        #     sent_output = self.sent_model(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
+        # print(f"Sent model forward pass time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # sent_embed = sent_output.last_hidden_state.mean(dim=1, keepdim=True)  # Average pooling
+        # print(f"Sent embed calculation time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # encoder_outputs = self.encoder_model.encoder(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
+        # print(f"Encoder model forward pass time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # word_embed = encoder_outputs.last_hidden_state
+        # print(f"Word embed extraction time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # embed_fusion = self.embed_fusion(sent_embed, word_embed)
+        # print(f"Embed fusion time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # decoder_outputs = self.decoder_model.decoder(inputs_embeds=embed_fusion, return_dict=return_dict)
+        # print(f"Decoder model forward pass time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # sequence_output = decoder_outputs.last_hidden_state
+        # print(f"Sequence output extraction time: {time.time() - start_time:.4f} seconds")
+        
+        # start_time = time.time()
+        # lm_logits = self.decoder_model.lm_head(sequence_output)
+        # print(f"Logits calculation time: {time.time() - start_time:.4f} seconds")
+
+        # loss = None
+        # if labels is not None:
+        #     start_time = time.time()
+        #     loss_fct = CrossEntropyLoss(ignore_index=-100)
+        #     labels = labels.to(lm_logits.device)
+        #     loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
+        #     print(f"Loss calculation time: {time.time() - start_time:.4f} seconds")
+        
+        
         with torch.no_grad():
             sent_output = self.sent_model(input_ids=input_ids, attention_mask=attention_mask, return_dict=return_dict)
             sent_embed = sent_output.last_hidden_state.mean(dim=1, keepdim=True)  # Average pooling
@@ -288,10 +327,9 @@ class SMT5Model(nn.Module):
         )
 
     def generate(self, sentences=None, max_length=512, top_k=3, early_stopping=True):       #max_length_train=512
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         tokenizer = AutoTokenizer.from_pretrained('google/mt5-base')
-        inputs = tokenizer(sentences,padding="max_length",truncation=True,max_length=max_length, return_tensors="pt").to(device)
+        inputs = tokenizer(sentences,padding="max_length",truncation=True,max_length=max_length, return_tensors="pt")
 
         sent_output = self.sent_model(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask, return_dict=True)
         sent_embed = sent_output.last_hidden_state.mean(dim=1, keepdim=True)  # Average pooling
