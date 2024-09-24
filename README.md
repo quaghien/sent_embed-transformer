@@ -1,6 +1,6 @@
 # Sentence embeddings into Transformer
 
-Incorporating sentence embeddings into Transformer for NMT built on the idea of ​​[this paper](https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/ell2.12840).
+Incorporating sentence embeddings into Transformer architecture for Neural Machine Translation built on the idea of ​​[this paper](https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/ell2.12840).
 
 ## Architecture
 
